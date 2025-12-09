@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;900&family=Roboto:wght@100&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <title>Noah Liguori-Bills' Will</title>
+</head>
+<body>
+<canvas id="canvas" style="display: block;"></canvas>
+</body>
+<script>
+//get vars
+const can = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+//cross product
+function cross(a, b) {
+    return  [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+}
+//dot product
+function dot(a, b) {
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+//vector multiplcation
+function mult(v, c) {
+    return [v[0] * c, v[1] * c, v[2] * c];
+}
+//vector addition
+function add(a, b) {
+    return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+}
+//vector subtraction
+function sub(a, b) {
+    return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+function pointIntersect(La, Lb, P0, P1, P2) {
+    let cross012 = cross(sub(P1, P0), sub(P2, P0));
+    let Lab = sub(Lb, La);
+    let t = dot(cross012, sub(La, P0)) / dot(mult(Lab, -1), cross012);
+    return add(La, mult(Lab, t));
+}
+//intersection between sun, roof points, and plane at p=y_bottom-house
+function shadow(xy, Sx, Sy, p) {
+    let [x, y] = xy;
+    const Sz = -100/798 * win_height;
+    Sy -= 1000/798 * win_height;
+    const z = 0;
+    let point = pointIntersect([Sx, Sy, Sz], [x, y, z], [0, p, 0], [0, p, 1], [1, p, 0]);
+    return [point[0], point[2]];
+}
+//draw house
+function drawHouse(t) {
+    //sky
+    const gradient = ctx.createLinearGradient(0, win_height * (Math.sin(t / 1000 + Math.PI) + 1) / 2, 0, win_height);
+    gradient.addColorStop(0, 'blue');
+    gradient.addColorStop(0.5, 'red');
+    gradient.addColorStop(1, '#e87836');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, win_width, win_height);
+    //text
+    ctx.fillStyle = "#4C4CFF";
+    fontSize = win_width / 14.6;
+    ctx.font = 'bold ' + String(fontSize) + "px Arial";
+    for (let y = fontSize; y < win_height + fontSize; y += fontSize ) {
+        ctx.fillText("THE ONLY HOME YOULL OWN", 0, y);
+    }
+    //body
+    hSizeFrac = 0.5;
+    hL = hSizeFrac * Math.min(win_width, win_height);
+    rPeak = hL / (1.5 * Math.sqrt(3));
+    const gb = ctx.createLinearGradient(0, win_height * (Math.sin(t / 1000 + Math.PI) + 1) / 2, 0, win_height);
+    gb.addColorStop(0, '#DDDDFF');
+    gb.addColorStop(0.5, '#FFDDDD');
+    gb.addColorStop(1, '#e87836');
+    ctx.fillStyle = gb;
+    ctx.fillRect(win_width / 2 - hL / 2, rPeak, hL, hL);
+    //roof
+    roofPoints = [
+        [win_width / 2 - hL / 2, rPeak],
+        [win_width / 2 - hL / 2 - 0.1 * hL, rPeak],
+        [win_width / 2, 0],
+        [win_width / 2 + hL / 2 + 0.1 * hL, rPeak],
+        [win_width / 2 + hL / 2, rPeak]
+    ];
+    const gr = ctx.createLinearGradient(0, win_height * (Math.sin(t / 1000 + Math.PI) + 1) / 2, 0, win_height);
+    gr.addColorStop(0, '#777799');
+    gr.addColorStop(0.5, '#997777');
+    gr.addColorStop(1, '#e87836');
+    ctx.fillStyle = gr;
+    var path = new Path2D();
+    path.moveTo(roofPoints[0][0], roofPoints[0][1]);
+    for (let i = 1; i < 5; i += 1) {
+        path.lineTo(roofPoints[i][0], roofPoints[i][1]);
+    }
+    ctx.fill(path);
+    //draw sun
+    ctx.fillStyle = "#FFFF00";
+    ctx.beginPath();
+    const sR = 1 * hL;
+    const Sx = win_width / 2 + sR * Math.cos(t / 1000);
+    const Sy = hL / 2 + rPeak + sR * Math.sin(t / 1000);
+    ctx.ellipse(Sx, Sy, 20, 20, 0, 0, 360);
+    ctx.fill();
+    //shadow
+    ctx.fillStyle = "#00000050";
+    var path = new Path2D();
+    path.moveTo(win_width / 2 - hL / 2, rPeak + hL);
+    for (let i = 0; i < 5; i += 1) {
+        let s = shadow(roofPoints[i], Sx, Sy, rPeak + hL);
+        path.lineTo(s[0], s[1] + rPeak + hL);
+    }
+    path.lineTo(win_width / 2 + hL / 2, rPeak + hL);
+    ctx.fill(path);
+}
+//animation
+let lastTime = 0;
+function anim() {
+    //resize
+    win_width = window.innerWidth;
+    win_height = window.innerHeight;
+    can.width = win_width;
+    can.height = win_height;
+    //time
+    t = Date.now();
+    drawHouse(t);
+    requestAnimationFrame(anim);
+}
+anim();
+</script>
+</html>
+
